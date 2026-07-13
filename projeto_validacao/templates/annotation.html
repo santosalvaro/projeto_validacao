@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validação</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .bullet-item { 
+            cursor: pointer; 
+            list-style-type: disc; 
+            margin-left: 25px; 
+            font-size: 1.2rem; 
+            color: #0d6efd; 
+            margin-bottom: 8px;
+        }
+        .bullet-item:hover { 
+            text-decoration: underline; 
+            color: #0a58ca; 
+        }
+        .hidden-radio { display: none; }
+        .btn-vote { width: 140px; padding: 15px; font-size: 1.2rem; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
+        <div class="container">
+            <span class="navbar-brand">Anotador: <strong>{{ session['username'] }}</strong></span>
+            <span class="text-white-50">Progresso: {{ progresso }} / 383</span>
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Sair</a>
+        </div>
+    </nav>
+
+    <div class="container mb-5" style="max-width: 750px;">
+        <div class="card shadow-sm p-4">
+            
+            <h5 class="text-muted mb-2 text-capitalize">mensagem:</h5>
+            <div class="p-3 bg-white border rounded mb-4" style="font-size: 1.2rem; line-height: 1.6; white-space: pre-wrap;">{{ sample['mensagem'] }}</div>
+
+            <h5 class="text-muted mb-3 text-capitalize">classificação:</h5>
+            
+            <ul class="mb-5" id="labelsList">
+                {% for label in labels %}
+                    <li class="bullet-item" onclick="showGlossary('{{ label }}')" data-raw-label="{{ label }}">
+                        <strong class="translated-text">{{ label }}</strong>
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <div class="text-center border-top pt-4">
+                <h4 class="mb-4">Esta classificação está correta?</h4>
+                <form id="voteForm" method="POST">
+                    <input type="hidden" name="sample_id" value="{{ sample['id'] }}">
+                    <label class="btn btn-success btn-vote mx-2 shadow-sm">
+                        <input type="radio" name="answer" value="Sim" class="hidden-radio" onclick="submitForm()"> Sim
+                    </label>
+                    <label class="btn btn-danger btn-vote mx-2 shadow-sm">
+                        <input type="radio" name="answer" value="Não" class="hidden-radio" onclick="submitForm()"> Não
+                    </label>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="glossaryModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title" id="modalTitle">Definição do Rótulo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body fs-5 py-4" id="modalBody">
+                    Carregando explicação...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mapeamento das traduções conforme traducao_tags.txt
+        const translationMap = {
+            "anecdotal evidence": "Evidência anedótica",
+            "outdated research": "Pesquisa Ultrapassada",
+            "poor research quality": "Má Qualidade de Pesquisa",
+            "fallibility of science": "Conhecimento Falível",
+            "fabricated studies": "Estudos Fabricados",
+            "selective reporting": "Reportamento Seletivo",
+            "conspiracy": "Conspiração",
+            "censorship": "Censura",
+            "alternative products/therapies": "Produtos/Terapias Alternativas",
+            "alternatives to vaccination": "Alternativas à Vacinação",
+            "alarmism": "Alarmismo",
+            "pseudoscientific claims": "Afirmações Pseudocientíficas",
+            "correlation vs causation": "Confundindo correlação com causalidade",
+            "financial misconduct": "Má Conduta Financeira",
+            "autonomy rights": "Direito de Autonomia",
+            "imperfect protection": "Proteção Imperfeita",
+            "herd immunity": "Imunidade de Rebanho",
+            "natural immunity": "Imunidade Natural",
+            "low disease risk": "Riscos Insuficientes",
+            "direct transmission": "Transmissão Direta",
+            "specific side effects": "Efeitos Colaterais Específicos",
+            "unsafe administration": "Aplicação Perigosa/Incompetência",
+            "high-risk groups": "Indivíduos de Alto Risco",
+            "viral myths": "Mitos Virais",
+            "religious/ethical beliefs": "Crenças Religiosas e Éticas",
+            "not misinformation": "Não desinformação"
+        };
+
+        const glossaryData = {
+            "anecdotal evidence": "Evidência anedótica - Uso de relatos pessoais no lugar de dados científicos.",
+            "outdated research": "Pesquisa Ultrapassada - Uso de pesquisas antigas ou já comprovadas como falsas.",
+            "poor research quality": "Má Qualidade de Pesquisa - Reclamações sobre insuficiência ou a qualidade de estudos.",
+            "fallibility of science": "Conhecimento Falível - Crença de que nunca se pode ter certeza sobre ciência.",
+            "fabricated studies": "Estudos Fabricados - Criação de estudos científicos falsos.",
+            "selective reporting": "Reportamento Seletivo - Seleção de dados para apoiar uma narrativa e aplicar resultados fora do contexto correto.",
+            "conspiracy": "Conspiração - Alegação de intenções ocultas e maléficas em ações de saúde.",
+            "censorship": "Censura - Alegações de que informações contrárias são suprimidas.",
+            "alternative products/therapies": "Produtos/Terapias Alternativas - Promoção de treatments sem validação científica e venda de produtos de saúde com alegações falsas.",
+            "alternatives to vaccination": "Alternativas à Vacinação - Alegações de que medidas ou tratamentos substituem vacinas.",
+            "alarmism": "Alarmismo - Disseminação de medos exagerados sobre tratamentos ou doenças. (Alegações sobre toxicidade de componentes de vacinas/tratamentos).",
+            "pseudoscientific claims": "Afirmações Pseudocientíficas - Afirmações que soam científicas, mas não são, utilizando de termos de pouco conhecimento público para fingir conhecimento.",
+            "correlation vs causation": "Confundindo correlação com causalidade - Confundir correlação com causalidade.",
+            "financial misconduct": "Má Conduta Financeira - Ganância financeira como motor de decisões em saúde.",
+            "autonomy rights": "Direito de Autonomia - Defesa do direito individual de recusar tratamentos.",
+            "imperfect protection": "Proteção Imperfeita - Argumentos de que vacinas/tratamentos não são 100% eficazes.",
+            "herd immunity": "Imunidade de Rebanho - Argumentos de que a proteção dos outros já basta.",
+            "natural immunity": "Imunidade Natural - Defesa da imunidade adquirida naturalmente em vez de vacinação.",
+            "low disease risk": "Riscos Insuficientes - Dizer que doenças são pouco graves ou não causam qualquer problema, minimizando a necessidade de vacinação.",
+            "direct transmission": "Transmissão Direta - Medo de contrair doença através da vacinação/tratamento.",
+            "specific side effects": "Efeitos Colaterais Específicos - Relatos de efeitos adversos específicos.",
+            "unsafe administration": "Aplicação Perigosa/Incompetência - Problemas relacionados à forma de administração ou negligência na aplicação por parte de autoridades de saúde.",
+            "high-risk groups": "Indivíduos de Alto Risco - Elegem grupos supostamente mais vulneráveis a riscos relacionados a tratamentos médicos e exageram nas exclamações (crianças, idosos, etc).",
+            "viral myths": "Mitos Virais - Mitos de saúde amplamente disseminados online.",
+            "religious/ethical beliefs": "Crenças Religiosas e Éticas - Conflito entre vacinação/tratamento e crenças pessoais.",
+            "not misinformation": "Não desinformação - Mensagens livres de desinformação, factuais e informativas."
+        };
+
+        // Realiza a tradução em tempo de carregamento na tela do cliente
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll("#labelsList li").forEach(li => {
+                const raw = li.getAttribute("data-raw-label").trim().toLowerCase();
+                if (translationMap[raw]) {
+                    li.querySelector(".translated-text").innerText = translationMap[raw];
+                }
+            });
+        });
+
+        function showGlossary(labelName) {
+            const key = labelName.trim().toLowerCase();
+            const titleText = translationMap[key] || labelName;
+            
+            document.getElementById('modalTitle').innerText = titleText;
+            document.getElementById('modalBody').innerText = glossaryData[key] || "Explicação conceitual não mapeada para esta classe.";
+            
+            var myModal = new bootstrap.Modal(document.getElementById('glossaryModal'));
+            myModal.show();
+        }
+
+        function submitForm() {
+            const inputs = document.querySelectorAll('.btn-vote');
+            inputs.forEach(i => i.classList.add('disabled', 'opacity-50'));
+            setTimeout(() => {
+                document.getElementById('voteForm').submit();
+            }, 150);
+        }
+    </script>
+</body>
+</html>
