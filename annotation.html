@@ -37,9 +37,16 @@
         .hidden-radio { display: none; }
         .btn-vote { width: 140px; padding: 15px; font-size: 1.2rem; font-weight: bold; }
         
-        /* Força o texto interno do tooltip do Bootstrap a alinhar à esquerda */
+        /* 1. Alinha o texto do tooltip à esquerda conforme o anexo */
         .tooltip-inner {
             text-align: left !important;
+            padding: 10px 12px !important;
+        }
+        /* Estilização extra para o título do tooltip ficar idêntico ao modelo */
+        .tooltip-inner strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 13px;
         }
     </style>
 </head>
@@ -64,7 +71,8 @@
                 {% for label in labels %}
                     <li class="bullet-item" data-raw-label="{{ label }}">
                         <strong class="translated-text">{{ label }}</strong>
-                        <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Carregando definição...">i</span>
+                        <!-- Adicionado data-bs-html="true" para permitir formatação dentro do tooltip -->
+                        <span class="info-icon" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="Carregando definição...">i</span>
                     </li>
                 {% endfor %}
             </ul>
@@ -124,7 +132,7 @@
             "selective reporting": "Seleção de dados para apoiar uma narrativa e aplicar resultados fora do contexto correto.",
             "conspiracy": "Alegação de intenções ocultas e maléficas em ações de saúde.",
             "censorship": "Alegações de que informações contrárias são suprimidas.",
-            "alternative products/therapies": "Promoção de tratamentos sem validação científica e venda de produtos de saúde com alegações falsas.",
+            "alternative products/therapies": "Promoção de treatments sem validação científica e venda de produtos de saúde com alegações falsas.",
             "alternatives to vaccination": "Alegações de que medidas ou tratamentos substituem vacinas.",
             "alarmism": "Disseminação de medos exagerados sobre tratamentos ou doenças. (Alegações sobre toxicidade de componentes de vacinas/tratamentos).",
             "pseudoscientific claims": "Afirmações que soam científicas, mas não são, utilizando de termos de pouco conhecimento público para fingir conhecimento.",
@@ -156,8 +164,10 @@
 
                 const icon = li.querySelector(".info-icon");
                 if (icon && glossaryData[raw]) {
-                    // Une o nome da classe com a definição correspondente dentro do tooltip
-                    icon.setAttribute("data-bs-title", displayLabel + ": " + glossaryData[raw]);
+                    // 2. Constrói a estrutura HTML exatamente como a do exemplo anexo: 
+                    // Nome da Classe em negrito (strong) que quebra a linha automaticamente, seguido do texto descritivo.
+                    const formattedTitle = `<strong>${displayLabel}</strong>${glossaryData[raw]}`;
+                    icon.setAttribute("data-bs-title", formattedTitle);
                 }
             });
 
